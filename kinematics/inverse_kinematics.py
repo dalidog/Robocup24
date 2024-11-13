@@ -13,9 +13,10 @@
 from forward_kinematics import ForwardKinematicsAgent
 from numpy.matlib import identity, matrix, linalg
 import jax.numpy as np2
+from math import atan2
 import numpy as np
 from jax import grad, jit
-
+from  numpy.linalg import norm
 
 class InverseKinematicsAgent(ForwardKinematicsAgent):
     def inverse_kinematics(self, effector_name, transform):
@@ -28,14 +29,15 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
         joint_angles = {}
         # YOUR CODE HERE
 
+        def make_work(t):
+            return [t[-1, 0],  t[-1, 1],  t[-1, 2],  atan2(t[2, 1], t[2, 2]) ]
+
         def error_func(j_a,target):
             Te = self.forward_kinematics(j_a)
-
             transformValues = [x for x in self.transforms.values()]
             transformMatrix = matrix([make_work(transformValues[-1])]).T
-
             e = target - transformMatrix
-            return e
+            return norm(e)
 
         for j in self.chains[effector_name]:
             joint_angles[j] = self.perception.joint[j]
@@ -45,14 +47,14 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
                     joint_angles[joint] = 0
 
         
-        func = lambda t: error_func(t, transform)
+        func = lambda t: error_func(t, make_work(transform))
         func_grad = jit(grad(func))
 
         for i in range(1000):
             e = func(joint_angles)
             d = func_grad(joint_angles)
             joint_angles -= d * 1e-2
-            if linalg.norm(e) < 1e-4:
+            if e < 1e-4:
                 break
         return joint_angles
 
