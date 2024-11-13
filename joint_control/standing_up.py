@@ -17,6 +17,20 @@ class StandingUpAgent(PostureRecognitionAgent):
     def standing_up(self):
         posture = self.posture
         # YOUR CODE HERE
+        act = {
+            "Back": rightBackToStand(),
+            "Left": leftBackToStand(),
+            "Belly": rightBellyToStand(),
+            "Right": rightBackToStand(),
+        }
+        try:
+            self.keyframes = act[posture]
+        except :
+            pass
+        if self.animation_done:
+            self.start_time = None
+
+
 
 
 class TestStandingUpAgent(StandingUpAgent):

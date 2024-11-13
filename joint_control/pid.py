@@ -1,3 +1,4 @@
+
 '''In this exercise you need to implement the PID controller for joints of robot.
 
 * Task:
@@ -18,7 +19,6 @@ import numpy as np
 from collections import deque
 from spark_agent import SparkAgent, JOINT_CMD_NAMES
 
-
 class PIDController(object):
     '''a discretized PID controller, it controls an array of servos,
        e.g. input is an array and output is also an array
@@ -35,9 +35,9 @@ class PIDController(object):
         self.e2 = np.zeros(size)
         # ADJUST PARAMETERS BELOW
         delay = 0
-        self.Kp = 0
-        self.Ki = 0
-        self.Kd = 0
+        self.Kp = 9
+        self.Ki = 0.2
+        self.Kd = 0.1
         self.y = deque(np.zeros(size), maxlen=delay + 1)
 
     def set_delay(self, delay):
@@ -53,7 +53,11 @@ class PIDController(object):
         @return control signal
         '''
         # YOUR CODE HERE
-
+        sensor = sensor + self.u * self.dt
+        self.u = self.u + (self.Kp + self.Ki*self.dt + self.Kd/self.dt)*(target - sensor) - (self.Kp + (2*self.Kd/self.dt))*self.e1 + (self.Kd/self.dt)*self.e2
+        self.e2 = self.e1
+        self.e1 = target - sensor
+        self.y.append(sensor)
         return self.u
 
 

@@ -21,6 +21,7 @@ import os
 import sys
 sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'joint_control'))
 
+import numpy as np
 from numpy.matlib import matrix, identity
 
 from recognize_posture import PostureRecognitionAgent
@@ -36,8 +37,11 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
         self.transforms = {n: identity(4) for n in self.joint_names}
 
         # chains defines the name of chain and joints of the chain
-        self.chains = {'Head': ['HeadYaw', 'HeadPitch']
-                       # YOUR CODE HERE
+        self.chains = {'Head': ['HeadYaw', 'HeadPitch'], # YOUR CODE HERE
+                       'LArm': ['LShoulderPitch', 'LShoulderRoll', 'LElbowYaw', 'LElbowRoll'],
+                       'LLeg': ['LHipYawPitch', 'LHipRoll', 'LHipPitch', 'LKneePitch', 'LAnklePitch', 'LAnkleRoll'],
+                       'RLeg': ['RHipYawPitch', 'RHipRoll', 'RHipPitch', 'RKneePitch', 'RAnklePitch', 'RAnkleRoll'],
+                       'RArm': ['RShoulderPitch', 'RShoulderRoll', 'RElbowYaw', 'RElbowRoll']
                        }
 
     def think(self, perception):
@@ -52,9 +56,65 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
         :return: transformation
         :rtype: 4x4 matrix
         '''
-        T = identity(4)
+        T = np.eye(4)
+        # print(T)
         # YOUR CODE HERE
+        if joint_name[-5:] == "Pitch": #y-coord rotation
+            T[0][0] = np.cos(joint_angle)
+            T[0][2] = np.sin(joint_angle)
+            T[2][0] = -1*np.sin(joint_angle)
+            T[2][2] = np.cos(joint_angle)
+            
+            if joint_name[:4] == "Head":
+                pass # all already 0.0 offset
+            elif joint_name[:9] == "LShoulder":
+                T[1][3] = 98.0
+                T[2][3] = 100.0
+            elif joint_name[:9] == "LHipYaw":
+                T[1][3] = 50.0
+                T[2][3] = -85.0
+            elif joint_name[:4] == "LHip":
+                pass
+            elif joint_name[:5] == "LKnee":
+                T[2][3] = -100.0
+            elif joint_name[:6] == "LAnkle":
+                T[2][3] = -102.9
+            elif joint_name[:7] == "RHipYaw":
+                T[1][3] = -50.0
+                T[2][3] = -85.0
+            elif joint_name[:4] == "RHip":
+                pass
+            elif joint_name[:5] == "RKnee":
+                T[2][3] = -100.0
+            elif joint_name[:6] == "RAnkle":
+               T[2][3] = -102.9
+            else: # RShoulder
+                T[1][3] = -98.0
+                T[2][3] = 100.0
+        elif joint_name[-3:] == "Yaw": #z-coord rotation
+            T[0][0] = np.cos(joint_angle)
+            T[1][0] = np.sin(joint_angle)
+            T[0][1] = -1*np.sin(joint_angle)
+            T[1][1] = np.cos(joint_angle)
 
+            if joint_name[:4] == "Head":
+                T[2][3] = 126.5
+            elif joint_name[:6] == "LElbow":
+                T[0][3] = 105.0
+                T[1][3] = 15.0
+            elif joint_name[:6] == "LWrist":
+                T[2][3] = 55.95
+            elif joint_name[:6] == "RElbow":
+                T[0][3] = 105.0
+                T[1][3] = -15.0
+            else: # RWrist
+                T[2][3] = 55.95
+        else:
+            T[1][1] = np.cos(joint_angle) #x-coord rotation (Roll)
+            T[2][1] = np.sin(joint_angle)
+            T[1][2] = -1*np.sin(joint_angle)
+            T[2][2] = np.cos(joint_angle)
+            # translations all 0 for rolls
         return T
 
     def forward_kinematics(self, joints):
@@ -63,12 +123,12 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
         :param joints: {joint_name: joint_angle}
         '''
         for chain_joints in self.chains.values():
-            T = identity(4)
+            T = np.eye(4)
             for joint in chain_joints:
                 angle = joints[joint]
                 Tl = self.local_trans(joint, angle)
                 # YOUR CODE HERE
-
+                T = np.dot(T,Tl)
                 self.transforms[joint] = T
 
 if __name__ == '__main__':
